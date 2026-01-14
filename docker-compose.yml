@@ -11,7 +11,7 @@ services:
     working_dir: /var/www/html
 
     volumes:
-      - ./var/www/html
+      - .:/var/www/html
       - ./storage:/var/www/html
       - ./bootstrap/cache:/var/www/html/bootstrap/cache
 
