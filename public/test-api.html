@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold mb-4">API Endpoint Test</h1>
+
+        <div class="mb-4">
+            <label class="block mb-2 font-medium">Proposal Group ID:</label>
+            <input type="number" id="groupId" value="4" class="border px-4 py-2 rounded w-full">
+        </div>
+
+        <div class="mb-4">
+            <button onclick="loadProposals()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                1. Load Proposals
+            </button>
+        </div>
+
+        <div id="proposalsResult" class="mb-4 p-4 bg-gray-50 rounded"></div>
+
+        <div class="mb-4">
+            <button onclick="sendTestRequest()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                2. Send Test Request
+            </button>
+        </div>
+
+        <div id="testResult" class="p-4 bg-gray-50 rounded"></div>
+    </div>
+
+    <script>
+        let proposals = [];
+        let group = null;
+
+        async function loadProposals() {
+            const groupId = document.getElementById('groupId').value;
+            const resultDiv = document.getElementById('proposalsResult');
+
+            resultDiv.innerHTML = '<p class="text-blue-600">Loading...</p>';
+
+            try {
+                const response = await fetch(`/api/proposal-groups/${groupId}/proposals`);
+                const data = await response.json();
+
+                console.log('Load Proposals Response:', data);
+
+                if (data.success) {
+                    proposals = data.proposals;
+                    group = data.group;
+
+                    resultDiv.innerHTML = `
+                        <p class="text-green-600 font-bold">✓ Loaded ${proposals.length} proposals</p>
+                        <p class="text-sm mt-2">Group: ${group.group_name}</p>
+                        <pre class="mt-2 text-xs bg-gray-900 text-green-400 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="text-red-600">Failed: ${data.message}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p class="text-red-600">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function sendTestRequest() {
+            const resultDiv = document.getElementById('testResult');
+
+            if (!proposals.length) {
+                alert('Please load proposals first!');
+                return;
+            }
+
+            const payload = {
+                username: "test-user",
+                proposal_group: parseInt(document.getElementById('groupId').value),
+                instrument_path: "instrumen/rubrik_test.xlsx",
+                scheme: "Penelitian-Dasar",
+                year: 2026,
+                proposals: proposals.map(p => ({
+                    id_proposal: p.id,
+                    filename: p.filename,
+                    filepath: p.path,
+                    status: p.status || 'pending'
+                }))
+            };
+
+            console.log('Sending payload:', payload);
+            resultDiv.innerHTML = '<p class="text-blue-600">Sending request...</p>';
+
+            try {
+                const response = await fetch('/api/evaluation-test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log('Response status:', response.status);
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p class="text-green-600 font-bold">✓ Request sent successfully!</p>
+                        <p class="text-sm mt-2">${data.message}</p>
+                        <pre class="mt-2 text-xs bg-gray-900 text-green-400 p-2 rounded overflow-auto">${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="text-red-600">Failed: ${data.message}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <p class="text-red-600 font-bold">Error: ${error.message}</p>
+                    <pre class="mt-2 text-xs bg-gray-900 text-red-400 p-2 rounded">${error.stack}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+
+</html>
